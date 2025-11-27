@@ -8,6 +8,8 @@ import StakingModule from '@/components/StakingModule';
 import NFTMinting from '@/components/NFTMinting';
 import PlanetTravel from '@/components/PlanetTravel';
 import Marketplace from '@/components/Marketplace';
+import Inventory, { InventoryItem } from '@/components/Inventory';
+import IdentityCard from '@/components/IdentityCard';
 import ActivityLog, { Activity } from '@/components/ActivityLog';
 import { useWeb3 } from '@/hooks/useWeb3';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +25,10 @@ const Index = () => {
   const [currentPlanet, setCurrentPlanet] = useState('Unknown');
   const [rank, setRank] = useState('Novice');
   const [hasIdentity, setHasIdentity] = useState(false);
+  const [identityData, setIdentityData] = useState<{name: string, planet: string, avatarURL: string, tokenId: string} | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [stakingBoost, setStakingBoost] = useState(1);
 
   // Add activity to log
   const addActivity = (type: Activity['type'], message: string) => {
@@ -40,17 +45,34 @@ const Index = () => {
   const TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
   const NFT_ADDRESS = '0x0000000000000000000000000000000000000000';
 
+  // Load inventory from localStorage
+  useEffect(() => {
+    const savedInventory = localStorage.getItem('astra-inventory');
+    if (savedInventory) {
+      setInventory(JSON.parse(savedInventory));
+    }
+  }, []);
+
+  // Save inventory to localStorage
+  const saveInventory = (items: InventoryItem[]) => {
+    localStorage.setItem('astra-inventory', JSON.stringify(items));
+    setInventory(items);
+  };
+
   // Load user data
   const loadUserData = async () => {
     if (!isConnected || !address) return;
 
     try {
-      // Mock data for demonstration
+      // Mock data for demonstration - in production, fetch from blockchain
       setBalance('1000');
       setStakedAmount('500');
-      setPendingRewards('25.5');
+      setPendingRewards((25.5 * stakingBoost).toFixed(1));
       setCurrentPlanet('Nova');
       setRank('Explorer');
+      
+      // Mock: Check if user has identity NFT
+      // In production: const hasNFT = await identityContract.balanceOf(address) > 0;
       setHasIdentity(false);
 
       addActivity('success', 'User data loaded successfully');
@@ -149,12 +171,25 @@ const Index = () => {
 
   // NFT Actions
   const handleMintIdentity = async (name: string, planet: number, avatarURL: string) => {
+    const planetNames = ['Nova', 'Orion', 'Vega', 'Lyra', 'Solis'];
     addActivity('pending', `Minting Galactic Identity: ${name}...`);
     try {
+      // Mock minting - in production, call smart contract
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      const identityInfo = {
+        name,
+        planet: planetNames[planet],
+        avatarURL: avatarURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + name,
+        tokenId: Math.floor(Math.random() * 10000).toString()
+      };
+      
+      setIdentityData(identityInfo);
+      setHasIdentity(true);
+      setCurrentPlanet(planetNames[planet]);
+      
       toast({ title: 'Success!', description: 'Minted Galactic Identity NFT' });
       addActivity('success', `Minted identity "${name}" successfully`);
-      setHasIdentity(true);
       loadUserData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -177,12 +212,25 @@ const Index = () => {
   };
 
   // Marketplace Actions
-  const handleBuyItem = async (itemId: string, price: string) => {
-    addActivity('pending', `Buying marketplace item...`);
+  const handleBuyItem = async (itemId: string, name: string, emoji: string, price: string, effect: string) => {
+    addActivity('pending', `Buying ${name}...`);
     try {
+      // Mock purchase - in production, call smart contract
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      toast({ title: 'Success!', description: 'Item purchased' });
-      addActivity('success', `Purchased item for ${price} ASTRA`);
+      
+      const newItem: InventoryItem = {
+        id: Date.now().toString(),
+        name,
+        emoji,
+        effect,
+        used: false
+      };
+      
+      const updatedInventory = [...inventory, newItem];
+      saveInventory(updatedInventory);
+      
+      toast({ title: 'Success!', description: `Purchased ${name}` });
+      addActivity('success', `Purchased ${name} for ${price} ASTRA`);
       loadUserData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -190,15 +238,53 @@ const Index = () => {
     }
   };
 
-  const handleSellItem = async (itemName: string, price: string) => {
+  const handleSellItem = async (itemName: string, price: string, category: string, description: string) => {
     addActivity('pending', `Listing ${itemName} for sale...`);
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       toast({ title: 'Success!', description: 'Item listed for sale' });
-      addActivity('success', `Listed "${itemName}" for ${price} ASTRA`);
+      addActivity('success', `Listed "${itemName}" (${category}) for ${price} ASTRA`);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to list item: ${error.message}`);
+    }
+  };
+
+  const handleUseItem = async (itemId: string) => {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+
+    addActivity('pending', `Using ${item.name}...`);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      // Apply item effects
+      if (item.effect.includes('Staking')) {
+        setStakingBoost(prev => prev + 0.1);
+        addActivity('success', `${item.name} activated! Staking boost increased`);
+      } else if (item.effect.includes('Reward')) {
+        setStakingBoost(prev => prev + 0.15);
+        addActivity('success', `${item.name} activated! Rewards boosted`);
+      } else if (item.effect.includes('Multiplier')) {
+        setStakingBoost(prev => prev + 0.2);
+        addActivity('success', `${item.name} activated! Multiplier enhanced`);
+      } else if (item.effect.includes('Glow')) {
+        addActivity('success', `${item.name} activated! Avatar glow changed`);
+      }
+      
+      // Mark item as used
+      const updatedInventory = inventory.map(i => 
+        i.id === itemId ? { ...i, used: true } : i
+      );
+      saveInventory(updatedInventory);
+      
+      // Refresh rewards with new boost
+      setPendingRewards((25.5 * stakingBoost).toFixed(1));
+      
+      toast({ title: 'Item Used!', description: `${item.name} effect applied` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      addActivity('error', `Failed to use item: ${error.message}`);
     }
   };
 
@@ -268,6 +354,16 @@ const Index = () => {
               rewards={pendingRewards}
             />
 
+            {/* Identity Card (if minted) */}
+            {identityData && (
+              <IdentityCard
+                name={identityData.name}
+                planet={identityData.planet}
+                avatarURL={identityData.avatarURL}
+                tokenId={identityData.tokenId}
+              />
+            )}
+
             {/* Main Content Grid */}
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="space-y-6">
@@ -295,36 +391,21 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Marketplace & Activity Log */}
+            {/* Marketplace, Inventory & Activity Log */}
             <div className="grid lg:grid-cols-2 gap-6">
-              <Marketplace onBuyItem={handleBuyItem} onSellItem={handleSellItem} />
+              <div className="space-y-6">
+                <Marketplace 
+                  onBuyItem={handleBuyItem} 
+                  onSellItem={handleSellItem}
+                  existingItems={inventory.map(i => i.name.toLowerCase())}
+                />
+                <Inventory items={inventory} onUseItem={handleUseItem} />
+              </div>
               <ActivityLog activities={activities} />
             </div>
           </div>
         )}
 
-        {/* Setup Instructions */}
-        {isConnected && (
-          <div className="mt-12 glass-card p-6 border-2 border-accent/20">
-            <h3 className="text-lg font-orbitron font-bold gradient-text mb-3">
-              📝 Setup Instructions
-            </h3>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p>
-                <strong className="text-foreground">1.</strong> Deploy the smart contracts (AstraToken.sol & AstraIdentity.sol) using Hardhat
-              </p>
-              <p>
-                <strong className="text-foreground">2.</strong> Update contract addresses in the code
-              </p>
-              <p>
-                <strong className="text-foreground">3.</strong> Make sure you're connected to the correct network (e.g., Sepolia testnet)
-              </p>
-              <p>
-                <strong className="text-foreground">4.</strong> Contract files are available in <code className="bg-muted px-1 py-0.5 rounded">src/contracts/</code>
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
