@@ -33,21 +33,7 @@ const PlanetTravel = ({ currentPlanet, hasIdentity, onTravel }: PlanetTravelProp
     }
   };
 
-  if (!hasIdentity) {
-    return (
-      <Card className="glass-card p-6 border-2 border-secondary/20">
-        <div className="text-center py-8">
-          <Rocket className="w-16 h-16 mx-auto mb-4 text-secondary opacity-50" />
-          <h3 className="text-xl font-orbitron font-bold text-foreground mb-2">
-            Planet Travel Locked
-          </h3>
-          <p className="text-muted-foreground">
-            Mint a Galactic Identity NFT first to unlock interplanetary travel!
-          </p>
-        </div>
-      </Card>
-    );
-  }
+  // Planet travel is now unlocked by default - no restrictions
 
   return (
     <Card className="glass-card p-6 border-2 border-secondary/20">
