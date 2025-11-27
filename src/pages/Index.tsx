@@ -11,12 +11,17 @@ import Marketplace from '@/components/Marketplace';
 import Inventory, { InventoryItem } from '@/components/Inventory';
 import IdentityCard from '@/components/IdentityCard';
 import ActivityLog, { Activity } from '@/components/ActivityLog';
+import LevelUpNotification from '@/components/LevelUpNotification';
 import { useWeb3 } from '@/hooks/useWeb3';
 import { useToast } from '@/hooks/use-toast';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { useEnhancedToast } from '@/components/EnhancedToast';
 
 const Index = () => {
   const { address, isConnected, provider, signer, connectWallet, disconnectWallet } = useWeb3();
   const { toast } = useToast();
+  const { playSound } = useNotificationSound();
+  const { showEnhancedToast } = useEnhancedToast();
 
   // State
   const [balance, setBalance] = useState('0');
@@ -29,6 +34,8 @@ const Index = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [stakingBoost, setStakingBoost] = useState(1);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [newRank, setNewRank] = useState('');
 
   // Add activity to log
   const addActivity = (type: Activity['type'], message: string) => {
@@ -44,6 +51,36 @@ const Index = () => {
   // Mock contract addresses (replace with actual deployed addresses)
   const TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000';
   const NFT_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+  // Calculate rank based on staked amount
+  const calculateRank = (staked: string) => {
+    const amount = parseFloat(staked);
+    if (amount >= 1000) return 'Cosmic Master';
+    if (amount >= 750) return 'Star Commander';
+    if (amount >= 500) return 'Galaxy Guardian';
+    if (amount >= 250) return 'Space Ranger';
+    if (amount >= 100) return 'Explorer';
+    return 'Novice';
+  };
+
+  // Check for level up
+  const checkLevelUp = (oldStaked: string, newStaked: string) => {
+    const oldRank = calculateRank(oldStaked);
+    const newRankCalc = calculateRank(newStaked);
+    
+    if (oldRank !== newRankCalc) {
+      setNewRank(newRankCalc);
+      setShowLevelUp(true);
+      playSound('levelup');
+      showEnhancedToast({
+        type: 'levelup',
+        title: 'Level Up!',
+        description: `You've reached rank: ${newRankCalc}`,
+      });
+    }
+    
+    return newRankCalc;
+  };
 
   // Load inventory from localStorage
   useEffect(() => {
@@ -69,7 +106,7 @@ const Index = () => {
       setStakedAmount('500');
       setPendingRewards((25.5 * stakingBoost).toFixed(1));
       setCurrentPlanet('Nova');
-      setRank('Explorer');
+      setRank(calculateRank('500'));
       
       // Mock: Check if user has identity NFT
       // In production: const hasNFT = await identityContract.balanceOf(address) > 0;
@@ -98,10 +135,20 @@ const Index = () => {
       // Update balance immediately
       setBalance((prev) => (parseFloat(prev) + parseFloat(amount)).toString());
       
-      toast({ title: 'Success!', description: `Bought ${amount} ASTRA tokens` });
+      playSound('success');
+      showEnhancedToast({
+        type: 'success',
+        title: 'Purchase Complete!',
+        description: `Bought ${amount} ASTRA tokens`,
+      });
       addActivity('success', `Successfully bought ${amount} ASTRA tokens`);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      playSound('error');
+      showEnhancedToast({
+        type: 'error',
+        title: 'Purchase Failed',
+        description: error.message,
+      });
       addActivity('error', `Failed to buy tokens: ${error.message}`);
     }
   };
@@ -121,10 +168,20 @@ const Index = () => {
       // Update balance immediately
       setBalance((prev) => (parseFloat(prev) - transferAmount).toString());
       
-      toast({ title: 'Success!', description: `Transferred ${amount} ASTRA` });
+      playSound('success');
+      showEnhancedToast({
+        type: 'success',
+        title: 'Transfer Complete!',
+        description: `Transferred ${amount} ASTRA`,
+      });
       addActivity('success', `Successfully transferred ${amount} ASTRA`);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      playSound('error');
+      showEnhancedToast({
+        type: 'error',
+        title: 'Transfer Failed',
+        description: error.message,
+      });
       addActivity('error', `Failed to transfer: ${error.message}`);
     }
   };
@@ -144,10 +201,20 @@ const Index = () => {
       // Update balance immediately
       setBalance((prev) => (parseFloat(prev) - burnAmount).toString());
       
-      toast({ title: 'Success!', description: `Burned ${amount} ASTRA tokens` });
+      playSound('success');
+      showEnhancedToast({
+        type: 'success',
+        title: 'Burn Complete!',
+        description: `Burned ${amount} ASTRA tokens`,
+      });
       addActivity('success', `Successfully burned ${amount} ASTRA tokens`);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      playSound('error');
+      showEnhancedToast({
+        type: 'error',
+        title: 'Burn Failed',
+        description: error.message,
+      });
       addActivity('error', `Failed to burn: ${error.message}`);
     }
   };
@@ -165,14 +232,31 @@ const Index = () => {
       
       await new Promise((resolve) => setTimeout(resolve, 2000));
       
+      const oldStaked = stakedAmount;
+      const newStaked = (parseFloat(stakedAmount) + stakeAmount).toString();
+      
       // Update balance and staked amount immediately
       setBalance((prev) => (parseFloat(prev) - stakeAmount).toString());
-      setStakedAmount((prev) => (parseFloat(prev) + stakeAmount).toString());
+      setStakedAmount(newStaked);
       
-      toast({ title: 'Success!', description: `Staked ${amount} ASTRA` });
+      // Check for level up
+      const newRankValue = checkLevelUp(oldStaked, newStaked);
+      setRank(newRankValue);
+      
+      playSound('stake');
+      showEnhancedToast({
+        type: 'stake',
+        title: 'Stake Complete!',
+        description: `Staked ${amount} ASTRA`,
+      });
       addActivity('success', `Successfully staked ${amount} ASTRA`);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      playSound('error');
+      showEnhancedToast({
+        type: 'error',
+        title: 'Stake Failed',
+        description: error.message,
+      });
       addActivity('error', `Failed to stake: ${error.message}`);
     }
   };
@@ -188,10 +272,20 @@ const Index = () => {
       setBalance((prev) => (parseFloat(prev) + rewardsAmount).toString());
       setPendingRewards('0');
       
-      toast({ title: 'Success!', description: 'Claimed staking rewards' });
+      playSound('claim');
+      showEnhancedToast({
+        type: 'claim',
+        title: 'Rewards Claimed!',
+        description: `Claimed ${rewardsAmount.toFixed(1)} ASTRA in rewards`,
+      });
       addActivity('success', `Claimed ${rewardsAmount.toFixed(1)} ASTRA in rewards`);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      playSound('error');
+      showEnhancedToast({
+        type: 'error',
+        title: 'Claim Failed',
+        description: error.message,
+      });
       addActivity('error', `Failed to claim: ${error.message}`);
     }
   };
@@ -206,11 +300,22 @@ const Index = () => {
       // Return staked amount to balance
       setBalance((prev) => (parseFloat(prev) + unstakeAmount).toString());
       setStakedAmount('0');
+      setRank(calculateRank('0'));
       
-      toast({ title: 'Success!', description: 'Unstaked all ASTRA' });
+      playSound('success');
+      showEnhancedToast({
+        type: 'success',
+        title: 'Unstake Complete!',
+        description: `Unstaked ${unstakeAmount} ASTRA`,
+      });
       addActivity('success', `Unstaked ${unstakeAmount} ASTRA`);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      playSound('error');
+      showEnhancedToast({
+        type: 'error',
+        title: 'Unstake Failed',
+        description: error.message,
+      });
       addActivity('error', `Failed to unstake: ${error.message}`);
     }
   };
@@ -284,10 +389,20 @@ const Index = () => {
       const updatedInventory = [...inventory, newItem];
       saveInventory(updatedInventory);
       
-      toast({ title: 'Success!', description: `Purchased ${name}` });
+      playSound('purchase');
+      showEnhancedToast({
+        type: 'purchase',
+        title: 'Item Purchased!',
+        description: `Bought ${name} for ${price} ASTRA`,
+      });
       addActivity('success', `Purchased ${name} for ${price} ASTRA`);
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      playSound('error');
+      showEnhancedToast({
+        type: 'error',
+        title: 'Purchase Failed',
+        description: error.message,
+      });
       addActivity('error', `Failed to buy item: ${error.message}`);
     }
   };
@@ -364,6 +479,13 @@ const Index = () => {
       <CosmicBackground />
 
       <div className="relative z-10 container mx-auto px-4 py-8">
+        {/* Level Up Notification */}
+        <LevelUpNotification 
+          show={showLevelUp} 
+          newRank={newRank}
+          onComplete={() => setShowLevelUp(false)}
+        />
+
         {/* Header */}
         <header className="flex flex-col md:flex-row items-center justify-between mb-12 gap-4">
           <div>
