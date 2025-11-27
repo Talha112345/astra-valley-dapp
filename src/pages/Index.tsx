@@ -33,7 +33,7 @@ const Index = () => {
   // Add activity to log
   const addActivity = (type: Activity['type'], message: string) => {
     const activity: Activity = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Unique ID
       type,
       message,
       timestamp: new Date(),
@@ -92,11 +92,14 @@ const Index = () => {
   const handleBuyTokens = async (amount: string) => {
     addActivity('pending', `Buying ${amount} ASTRA tokens...`);
     try {
-      // Mock implementation
+      // Mock implementation - in production, call smart contract
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Update balance immediately
+      setBalance((prev) => (parseFloat(prev) + parseFloat(amount)).toString());
+      
       toast({ title: 'Success!', description: `Bought ${amount} ASTRA tokens` });
       addActivity('success', `Successfully bought ${amount} ASTRA tokens`);
-      loadUserData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to buy tokens: ${error.message}`);
@@ -106,10 +109,20 @@ const Index = () => {
   const handleTransferTokens = async (to: string, amount: string) => {
     addActivity('pending', `Transferring ${amount} ASTRA to ${to.slice(0, 10)}...`);
     try {
+      const transferAmount = parseFloat(amount);
+      const currentBalance = parseFloat(balance);
+      
+      if (currentBalance < transferAmount) {
+        throw new Error('Insufficient balance');
+      }
+      
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Update balance immediately
+      setBalance((prev) => (parseFloat(prev) - transferAmount).toString());
+      
       toast({ title: 'Success!', description: `Transferred ${amount} ASTRA` });
       addActivity('success', `Successfully transferred ${amount} ASTRA`);
-      loadUserData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to transfer: ${error.message}`);
@@ -119,10 +132,20 @@ const Index = () => {
   const handleBurnTokens = async (amount: string) => {
     addActivity('pending', `Burning ${amount} ASTRA tokens...`);
     try {
+      const burnAmount = parseFloat(amount);
+      const currentBalance = parseFloat(balance);
+      
+      if (currentBalance < burnAmount) {
+        throw new Error('Insufficient balance');
+      }
+      
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Update balance immediately
+      setBalance((prev) => (parseFloat(prev) - burnAmount).toString());
+      
       toast({ title: 'Success!', description: `Burned ${amount} ASTRA tokens` });
       addActivity('success', `Successfully burned ${amount} ASTRA tokens`);
-      loadUserData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to burn: ${error.message}`);
@@ -133,10 +156,21 @@ const Index = () => {
   const handleStake = async (amount: string) => {
     addActivity('pending', `Staking ${amount} ASTRA...`);
     try {
+      const stakeAmount = parseFloat(amount);
+      const currentBalance = parseFloat(balance);
+      
+      if (currentBalance < stakeAmount) {
+        throw new Error('Insufficient balance');
+      }
+      
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Update balance and staked amount immediately
+      setBalance((prev) => (parseFloat(prev) - stakeAmount).toString());
+      setStakedAmount((prev) => (parseFloat(prev) + stakeAmount).toString());
+      
       toast({ title: 'Success!', description: `Staked ${amount} ASTRA` });
       addActivity('success', `Successfully staked ${amount} ASTRA`);
-      loadUserData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to stake: ${error.message}`);
@@ -146,10 +180,16 @@ const Index = () => {
   const handleClaimRewards = async () => {
     addActivity('pending', 'Claiming staking rewards...');
     try {
+      const rewardsAmount = parseFloat(pendingRewards);
+      
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Add rewards to balance and reset pending rewards
+      setBalance((prev) => (parseFloat(prev) + rewardsAmount).toString());
+      setPendingRewards('0');
+      
       toast({ title: 'Success!', description: 'Claimed staking rewards' });
-      addActivity('success', `Claimed ${pendingRewards} ASTRA in rewards`);
-      loadUserData();
+      addActivity('success', `Claimed ${rewardsAmount.toFixed(1)} ASTRA in rewards`);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to claim: ${error.message}`);
@@ -159,10 +199,16 @@ const Index = () => {
   const handleUnstake = async () => {
     addActivity('pending', 'Unstaking all ASTRA...');
     try {
+      const unstakeAmount = parseFloat(stakedAmount);
+      
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Return staked amount to balance
+      setBalance((prev) => (parseFloat(prev) + unstakeAmount).toString());
+      setStakedAmount('0');
+      
       toast({ title: 'Success!', description: 'Unstaked all ASTRA' });
-      addActivity('success', `Unstaked ${stakedAmount} ASTRA`);
-      loadUserData();
+      addActivity('success', `Unstaked ${unstakeAmount} ASTRA`);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to unstake: ${error.message}`);
@@ -215,11 +261,20 @@ const Index = () => {
   const handleBuyItem = async (itemId: string, name: string, emoji: string, price: string, effect: string) => {
     addActivity('pending', `Buying ${name}...`);
     try {
-      // Mock purchase - in production, call smart contract
+      const itemPrice = parseFloat(price);
+      const currentBalance = parseFloat(balance);
+      
+      if (currentBalance < itemPrice) {
+        throw new Error('Insufficient balance');
+      }
+      
       await new Promise((resolve) => setTimeout(resolve, 2000));
       
+      // Deduct price from balance
+      setBalance((prev) => (parseFloat(prev) - itemPrice).toString());
+      
       const newItem: InventoryItem = {
-        id: Date.now().toString(),
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
         emoji,
         effect,
@@ -231,7 +286,6 @@ const Index = () => {
       
       toast({ title: 'Success!', description: `Purchased ${name}` });
       addActivity('success', `Purchased ${name} for ${price} ASTRA`);
-      loadUserData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
       addActivity('error', `Failed to buy item: ${error.message}`);
