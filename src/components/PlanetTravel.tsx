@@ -3,6 +3,7 @@ import { Rocket } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getPlanetTheme } from '@/lib/planetThemes';
 
 interface PlanetTravelProps {
   currentPlanet: string;
@@ -11,16 +12,17 @@ interface PlanetTravelProps {
 }
 
 const PLANETS = [
-  { value: 0, name: 'Nova', emoji: '⭐', description: 'Blazing star of eternal light' },
-  { value: 1, name: 'Orion', emoji: '🌟', description: 'Hunter of the cosmic frontier' },
-  { value: 2, name: 'Vega', emoji: '✨', description: 'Brightest jewel in the sky' },
-  { value: 3, name: 'Lyra', emoji: '💫', description: 'Harmonious celestial melody' },
-  { value: 4, name: 'Solis', emoji: '☀️', description: 'Golden heart of warmth' },
+  { value: 0, name: 'Nova', emoji: '⭐', description: 'Blazing star of eternal light', color: '#ff1744' },
+  { value: 1, name: 'Orion', emoji: '🌟', description: 'Hunter of the cosmic frontier', color: '#2196f3' },
+  { value: 2, name: 'Vega', emoji: '✨', description: 'Brightest jewel in the sky', color: '#9c27b0' },
+  { value: 3, name: 'Lyra', emoji: '💫', description: 'Harmonious celestial melody', color: '#00e676' },
+  { value: 4, name: 'Solis', emoji: '☀️', description: 'Golden heart of warmth', color: '#ffc107' },
 ];
 
 const PlanetTravel = ({ currentPlanet, hasIdentity, onTravel }: PlanetTravelProps) => {
   const [selectedPlanet, setSelectedPlanet] = useState('');
   const [loading, setLoading] = useState(false);
+  const currentTheme = getPlanetTheme(currentPlanet);
 
   const handleTravel = async () => {
     if (!selectedPlanet) return;
@@ -42,11 +44,22 @@ const PlanetTravel = ({ currentPlanet, hasIdentity, onTravel }: PlanetTravelProp
         Planet Travel
       </h3>
 
-      <div className="glass-card p-4 mb-4 text-center">
-        <p className="text-xs text-muted-foreground mb-1">Current Location</p>
-        <p className="text-2xl font-orbitron font-bold text-foreground">
+      <div className="glass-card p-4 mb-4 text-center relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{ background: currentTheme.background.gradient }}
+        />
+        <p className="text-xs text-muted-foreground mb-1 relative z-10">Current Location</p>
+        <p className="text-2xl font-orbitron font-bold text-foreground relative z-10">
           {PLANETS.find((p) => p.name === currentPlanet)?.emoji || '🌍'} {currentPlanet}
         </p>
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-1"
+          style={{ 
+            background: `linear-gradient(90deg, transparent, ${currentTheme.colors.glow}, transparent)`,
+            boxShadow: `0 0 10px ${currentTheme.colors.glow}`
+          }}
+        />
       </div>
 
       <div className="space-y-4">
@@ -58,11 +71,20 @@ const PlanetTravel = ({ currentPlanet, hasIdentity, onTravel }: PlanetTravelProp
             <SelectContent>
               {PLANETS.filter((p) => p.name !== currentPlanet).map((p) => (
                 <SelectItem key={p.value} value={p.value.toString()}>
-                  <div>
-                    <span className="font-orbitron font-bold">
-                      {p.emoji} {p.name}
-                    </span>
-                    <p className="text-xs text-muted-foreground">{p.description}</p>
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ 
+                        backgroundColor: p.color,
+                        boxShadow: `0 0 8px ${p.color}`
+                      }}
+                    />
+                    <div>
+                      <span className="font-orbitron font-bold">
+                        {p.emoji} {p.name}
+                      </span>
+                      <p className="text-xs text-muted-foreground">{p.description}</p>
+                    </div>
                   </div>
                 </SelectItem>
               ))}

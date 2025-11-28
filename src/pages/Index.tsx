@@ -16,6 +16,7 @@ import { useWeb3 } from '@/hooks/useWeb3';
 import { useToast } from '@/hooks/use-toast';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useEnhancedToast } from '@/components/EnhancedToast';
+import { usePlanetTheme } from '@/hooks/usePlanetTheme';
 
 const Index = () => {
   const { address, isConnected, provider, signer, connectWallet, disconnectWallet } = useWeb3();
@@ -28,6 +29,9 @@ const Index = () => {
   const [stakedAmount, setStakedAmount] = useState('0');
   const [pendingRewards, setPendingRewards] = useState('0');
   const [currentPlanet, setCurrentPlanet] = useState('Unknown');
+  
+  // Apply planet theme
+  usePlanetTheme(currentPlanet);
   const [rank, setRank] = useState('Novice');
   const [hasIdentity, setHasIdentity] = useState(false);
   const [identityData, setIdentityData] = useState<{name: string, planet: string, avatarURL: string, tokenId: string} | null>(null);
@@ -476,7 +480,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      <CosmicBackground />
+      <CosmicBackground planet={currentPlanet} />
 
       <div className="relative z-10 container mx-auto px-4 py-8">
         {/* Level Up Notification */}

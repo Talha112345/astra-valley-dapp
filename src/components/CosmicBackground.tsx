@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
+import { getPlanetTheme } from '@/lib/planetThemes';
 
-const CosmicBackground = () => {
+interface CosmicBackgroundProps {
+  planet?: string;
+}
+
+const CosmicBackground = ({ planet = 'Unknown' }: CosmicBackgroundProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = getPlanetTheme(planet);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -41,7 +47,7 @@ const CosmicBackground = () => {
 
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+        ctx.fillStyle = theme.background.starColor.replace('0.9', star.opacity.toString());
         ctx.fill();
 
         star.y += star.speed;
@@ -67,13 +73,13 @@ const CosmicBackground = () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [planet]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 -z-10"
-      style={{ background: 'radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%)' }}
+      className="fixed inset-0 -z-10 transition-all duration-1000"
+      style={{ background: theme.background.gradient }}
     />
   );
 };
